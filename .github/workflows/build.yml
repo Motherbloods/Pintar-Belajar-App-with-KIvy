@@ -26,12 +26,26 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
+          # First install basic build tools and libraries
           sudo apt-get install -y \
             python3-pip \
             build-essential \
             git \
             python3 \
             python3-dev \
+            libffi-dev \
+            libssl-dev \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            zlib1g-dev
+          
+          # Install libunwind-dev first as it's a dependency for gstreamer
+          sudo apt-get install -y libunwind-dev
+          
+          # Install multimedia libraries
+          sudo apt-get install -y \
             ffmpeg \
             libsdl2-dev \
             libsdl2-image-dev \
@@ -40,17 +54,14 @@ jobs:
             libportmidi-dev \
             libswscale-dev \
             libavformat-dev \
-            libavcodec-dev \
-            zlib1g-dev \
+            libavcodec-dev
+          
+          # Install GStreamer and related packages
+          sudo apt-get install -y \
+            libgstreamer1.0-dev \
             libgstreamer1.0 \
             gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good \
-            libffi-dev \
-            libssl-dev \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config
+            gstreamer1.0-plugins-good
 
       - name: Install Android SDK Command Line Tools
         run: |
