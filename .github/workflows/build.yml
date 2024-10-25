@@ -99,10 +99,10 @@ jobs:
           if [ ! -f buildozer.spec ]; then
             buildozer init
           fi
-          sed -i 's/^android.ndk =.*/android.ndk = 25b/g' buildozer.spec
-          sed -i 's/^android.sdk =.*/android.sdk = 33/g' buildozer.spec
-          sed -i 's/^requirements =.*/requirements = python3==3.8.18,hostpython3==3.8.18,kivy,kivymd==1.1.1,pillow/g' buildozer.spec
-          sed -i 's/^android.ndk_path =.*/android.ndk_path = ~/.buildozer\/android\/platform\/android-ndk-r25b/g' buildozer.spec
+          sed -i 's|^android.ndk =.*|android.ndk = 25b|g' buildozer.spec
+          sed -i 's|^android.sdk =.*|android.sdk = 33|g' buildozer.spec
+          sed -i 's|^requirements =.*|requirements = python3==3.8.18,hostpython3==3.8.18,kivy,kivymd==1.1.1,pillow|g' buildozer.spec
+          sed -i 's|^android.ndk_path =.*|android.ndk_path = ~/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
 
       - name: Build APK
         run: |
