@@ -23,15 +23,6 @@ jobs:
           pip install --upgrade wheel setuptools
           pip install python-for-android
 
-      # Hapus step Clean Buildozer karena menyebabkan error
-
-      - name: Initialize Buildozer
-        run: |
-          buildozer init
-          # Edit buildozer.spec jika diperlukan
-          sed -i 's/^android.sdk_path =.*/android.sdk_path = \/usr\/local\/lib\/android\/sdk/g' buildozer.spec
-          sed -i 's/^android.ndk_path =.*/android.ndk_path = \/usr\/local\/lib\/android\/sdk\/ndk\/27.1.12297006/g' buildozer.spec
-
       - name: Install system dependencies
         run: |
           sudo apt-get update
