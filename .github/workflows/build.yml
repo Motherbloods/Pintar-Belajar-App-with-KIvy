@@ -21,14 +21,16 @@ jobs:
           pip install buildozer==1.5.0
           pip install cython==0.29.33
           pip install --upgrade wheel setuptools
+          pip install python-for-android
 
-      - name: Cache Buildozer dependencies
-        uses: actions/cache@v3
-        with:
-          path: .buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
+      # Hapus step Clean Buildozer karena menyebabkan error
+
+      - name: Initialize Buildozer
+        run: |
+          buildozer init
+          # Edit buildozer.spec jika diperlukan
+          sed -i 's/^android.sdk_path =.*/android.sdk_path = \/usr\/local\/lib\/android\/sdk/g' buildozer.spec
+          sed -i 's/^android.ndk_path =.*/android.ndk_path = \/usr\/local\/lib\/android\/sdk\/ndk\/27.1.12297006/g' buildozer.spec
 
       - name: Install system dependencies
         run: |
@@ -55,9 +57,24 @@ jobs:
             automake \
             python3-sphinx
 
-      - name: Clean Buildozer
+      - name: Setup Android SDK & NDK
         run: |
-          buildozer android clean
+          mkdir -p $HOME/.buildozer/android/platform
+          wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip
+          unzip commandlinetools-linux-*_latest.zip
+          rm commandlinetools-linux-*_latest.zip
+          mkdir -p $ANDROID_HOME/cmdline-tools/latest
+          mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+
+      - name: Create python-for-android directory
+        run: |
+          mkdir -p .buildozer/android/platform/
+          cd .buildozer/android/platform/
+          git clone https://github.com/kivy/python-for-android.git
+          cd python-for-android
+          python setup.py install
 
       - name: Build with Buildozer
         run: |
