@@ -1,154 +1,180 @@
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.relativelayout import RelativeLayout
-from kivy.uix.image import Image
-from kivy.uix.label import Label
-from kivy.uix.button import Button
 from kivy.core.window import Window
-from kivy.graphics import Rectangle
+from utils.sound_manager import SoundManager
+from components.animated_widget import AnimatedImage
+from components.common_ui import ClickableImage
+from components.popup.avatar_popup import AvatarPopup
+from components.popup.settings_popup import SettingsPopup
+from utils.keyboard_manager import KeyboardManager
+from components.ui.background import Background
+from components.ui.title_image import TitleImage
+from components.ui.button_layout import ButtonLayout
+from components.ui.settings_widget import SettingsIcon
+from utils.user_data_utils import UserDataUtils
+from config import Config
+from kivy.metrics import Metrics
 
 
 class MainApp(App):
-    def build(self):
-        # Set ukuran window (sesuaikan jika diperlukan)
-        Window.size = (800, 600)
+    @staticmethod
+    def get_window_size():
+        base_width = 450
+        window_height = int(base_width * (16 / 9))
+        return base_width, window_height
 
-        # Gunakan RelativeLayout agar kita bisa bebas mengatur posisi elemen
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        static_path, animated_path = UserDataUtils.load_avatar_selection()
+        self.current_avatar_path = animated_path
+        self.current_static_avatar = static_path
+        self.avatar_popup = None
+        self.settings_popup = None
+        self.keyboard_manager = None
+        self.current_selection = 0
+
+    def build(self):
+
+        SoundManager.initialize_bgm()
+        SoundManager.initialize_arrow_sound()
+        UserDataUtils.check_unlocked_avatars()
+        self.original_size = Window.size
+        self.original_dpi = Metrics.dpi
+
+        base_width = 450
+        window_height = int(base_width * (16 / 9))
+        Window.size = (base_width, window_height)
         self.root = RelativeLayout()
 
-        with self.root.canvas.before:
-            self.background = Rectangle(
-                source="board.png", pos=self.root.pos, size=Window.size
-            )
+        self.keyboard_manager = KeyboardManager(self)
 
-        # Update ukuran background jika ukuran window berubah
-        self.root.bind(size=self.update_background, pos=self.update_background)
+        self.background = Background()
 
-        # Tambahkan icon musik di pojok kiri atas
-        music_icon = Image(
-            source="th.jpeg",
+        self.root.add_widget(self.background)
+
+        self.static_avatar = ClickableImage(
+            source=self.current_static_avatar,
             size_hint=(None, None),
-            size=(50, 50),
-            pos=(10, Window.height - 60),
+            size=Config.get_avatar_size(50, 50),
+            pos_hint={"x": 0.02, "top": 0.95},
+            on_click=self.show_avatar_popup,
         )
-        self.root.add_widget(music_icon)
 
-        # Tambahkan label untuk judul di tengah
-        title = Label(
-            text="PINTAR BERHITUNG",
-            font_size=36,
-            pos_hint={"center_x": 0.5, "center_y": 0.75},
-            color=(0, 0, 0, 1),
-        )
-        self.root.add_widget(title)
+        self.root.add_widget(self.static_avatar)
 
-        # Tambahkan tombol untuk "PILIH MODE" dan "KELUAR GAME"
-        btn_layout = BoxLayout(
-            orientation="vertical",
+        self.settings_icon = SettingsIcon(self.show_settings_popup)
+
+        self.root.add_widget(self.settings_icon)
+
+        self.title_image = TitleImage()
+        self.root.add_widget(self.title_image)
+
+        self.animated_avatar = AnimatedImage(
             size_hint=(None, None),
-            size=(400, 200),
-            pos_hint={"center_x": 0.5, "center_y": 0.5},
-            spacing=20,
+            size=Config.get_animated_avatar_size(),
+            base_path=self.current_avatar_path,
+            frame_count=6,
+            fps=10,
+            pos_hint={"center_x": 0.8, "center_y": 0.5},
         )
+        self.root.add_widget(self.animated_avatar)
 
-        self.pilih_mode_btn = Button(
-            text="PILIH MODE",
-            font_size=24,
-            size_hint=(1, None),
-            height=50,
-            background_normal="",
-            background_color=(0.8, 0.8, 0.8, 1),
-            color=(0, 0, 0, 1),
-        )
-        self.keluar_game_btn = Button(
-            text="KELUAR GAME",
-            font_size=24,
-            size_hint=(1, None),
-            height=50,
-            background_normal="",
-            background_color=(0.8, 0.8, 0.8, 1),
-            color=(0, 0, 0, 1),
-        )
+        self.button_layout = ButtonLayout(self)
 
-        self.profile_icon = Image(
-            source="th.jpeg",
-            size_hint=(None, None),
-            size=(50, 50),
-            pos_hint={"center_x": 0.85, "center_y": 0.55},
-        )
-        self.root.add_widget(self.profile_icon)
+        self.root.add_widget(self.button_layout)
 
-        btn_layout.add_widget(self.pilih_mode_btn)
-        btn_layout.add_widget(self.keluar_game_btn)
-        self.root.add_widget(btn_layout)
-
-        # Buat layout vertikal untuk panah atas, tombol enter, dan panah bawah
-        arrow_layout = BoxLayout(
-            orientation="vertical",
-            size_hint=(None, None),
-            size=(80, 200),
-            pos_hint={"right": 0.98, "center_y": 0.2},
-            spacing=10,
-        )
-
-        # Tambahkan panah atas sebagai gambar
-        arrow_up = Button(
-            background_normal="arrow_up.png",
-            background_down="arrow_up.png",
-            border=(0, 0, 0, 0),
-            size_hint=(None, None),
-            size=(60, 60),
-        )
-
-        # Tambahkan label enter
-        enter_label = Label(
-            text="enter",
-            font_size=20,
-            size_hint=(None, None),
-            size=(60, 40),
-            color=(0, 0, 0, 1),
-        )
-
-        # Tambahkan panah bawah sebagai gambar
-        arrow_down = Button(
-            background_normal="arrow_down.png",
-            background_down="arrow_down.png",
-            border=(0, 0, 0, 0),
-            size_hint=(None, None),
-            size=(60, 60),
-        )
-
-        arrow_layout.add_widget(arrow_up)
-        arrow_layout.add_widget(enter_label)
-        arrow_layout.add_widget(arrow_down)
-
-        self.root.add_widget(arrow_layout)
-
-        # Bind keyboard events
-        Window.bind(on_key_down=self._on_keyboard_down)
+        self.update_selection()
 
         return self.root
 
-    def _on_keyboard_down(self, instance, keyboard, keycode, text, modifiers):
-        if keycode == 82:  # Up arrow
-            self.profile_icon.pos_hint = {"center_x": 0.85, "center_y": 0.55}
-            self.pilih_mode_btn.background_color = (0.7, 0.7, 0.7, 1)
-            self.keluar_game_btn.background_color = (0.8, 0.8, 0.8, 1)
-        elif keycode == 81:  # Down arrow
-            self.profile_icon.pos_hint = {"center_x": 0.85, "center_y": 0.45}
-            self.pilih_mode_btn.background_color = (0.8, 0.8, 0.8, 1)
-            self.keluar_game_btn.background_color = (0.7, 0.7, 0.7, 1)
-        elif keycode == 40:  # Enter key
-            if self.profile_icon.pos_hint["center_y"] == 0.55:
-                print("PILIH MODE selected")
-                # Add your logic for PILIH MODE here
-            else:
-                print("KELUAR GAME selected")
-                App.get_running_app().stop()
+    def on_settings_press(self, instance, touch):
+        if instance.collide_point(*touch.pos):
+            SoundManager.play_arrow_sound()
+            self.show_settings_popup()
 
-    def update_background(self, *args):
-        self.background.size = Window.size
-        self.background.pos = (0, 0)
+    def show_settings_popup(self, instance):
+        SoundManager.play_arrow_sound()
+        if not self.settings_popup:
+            self.settings_popup = SettingsPopup(
+                current_avatar_path=self.current_avatar_path
+            )
+        self.settings_popup.open()
+
+    def play_sound_and_show_avatar(self, instance):
+        SoundManager.play_arrow_sound()
+        self.show_avatar_options(instance)
+
+    def on_button_press(self, instance):
+        SoundManager.play_arrow_sound()
+        self.current_selection = instance.index
+        self.update_selection()
+        self.activate_current_selection()
+
+    def move_selection_down(self):
+        SoundManager.play_arrow_sound()
+        self.current_selection = min(1, self.current_selection + 1)
+        self.update_selection()
+
+    def move_selection_up(self):
+        SoundManager.play_arrow_sound()
+        self.current_selection = max(0, self.current_selection - 1)
+        self.update_selection()
+
+    def update_selection(self):
+        if self.current_selection == 0:
+            self.animated_avatar.pos_hint = {"center_x": 0.73, "center_y": 0.573}
+        else:
+            self.animated_avatar.pos_hint = {"center_x": 0.73, "center_y": 0.473}
+
+    def activate_current_selection(self):
+        if self.current_selection == 0:
+            self.play_sound_and_go_to_mode(None)
+        else:
+            self.play_sound_and_exit(None)
+
+    def show_avatar_popup(self, instance):
+        SoundManager.play_arrow_sound()
+        self.avatar_popup = AvatarPopup(
+            current_avatar=self.current_static_avatar,
+            on_avatar_change=self.change_avatar,
+        )
+        self.avatar_popup.open()
+
+    def change_avatar(self, static_path, animated_base_path):
+        SoundManager.play_arrow_sound()
+        self.static_avatar.update_source(static_path)
+        self.current_static_avatar = static_path
+        self.current_avatar_path = animated_base_path
+        self.static_avatar.update_source(static_path)
+        self.animated_avatar.update_animation(animated_base_path, 6)
+        UserDataUtils.save_avatar_selection(static_path, animated_base_path)
+
+        if self.avatar_popup:
+            self.avatar_popup.current_avatar = static_path
+            self.avatar_popup.dismiss()
+        if self.settings_popup:
+            self.settings_popup.current_avatar_path = animated_base_path
+            self.settings_popup.animated_avatar.update_animation(animated_base_path, 6)
+
+    def play_sound_and_go_to_mode(self, instance):
+        SoundManager.play_arrow_sound()
+        self.go_to_mode(instance)
+
+    def play_sound_and_exit(self, instance):
+        SoundManager.play_arrow_sound()
+        self.exit_game(instance)
+
+    def go_to_mode(self, instance):
+        App.get_running_app().stop()
+        from zone_screen import ModeApp
+
+        ModeApp(
+            avatar_path=self.current_avatar_path,
+            static_avatar_path=self.current_static_avatar,
+        ).run()
+
+    def exit_game(self, instance):
+        App.get_running_app().stop()
 
 
 if __name__ == "__main__":
